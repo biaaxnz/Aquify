@@ -1,0 +1,4 @@
+Options -Indexes
+<FilesMatch "(^config(\.sample)?\.php$|^installed\.lock$|\.sql$|\.md$)">
+  Require all denied
+</FilesMatch>
