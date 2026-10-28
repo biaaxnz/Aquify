@@ -18,14 +18,22 @@ export default async function DashboardPage() {
 
   const pointsResult = await supabase.from("points").select("id", { count: "exact" }).eq("owner_id", user.id);
   const pointIds = (pointsResult.data ?? []).map((point) => point.id);
-  const [measurementsResult, waterResult, recentResult] = pointIds.length
+  const [measurementsResult, waterResult, analysesResult, recentResult] = pointIds.length
     ? await Promise.all([
       supabase.from("measurements").select("id", { count: "exact", head: true }).in("point_id", pointIds),
       supabase.from("water_samples").select("id", { count: "exact", head: true }).in("point_id", pointIds),
+      supabase.from("analyses").select("id", { count: "exact", head: true }).in("point_id", pointIds),
       supabase.from("measurements").select("id,point_id,spacing_m,rho_a,measured_at,points(name,code)").in("point_id", pointIds).order("measured_at", { ascending: false }).limit(5),
     ])
-    : [null, null, null];
-  const loadError = pointsResult.error || measurementsResult?.error || waterResult?.error || recentResult?.error;
+    : [null, null, null, null];
+  const loadError = pointsResult.error || measurementsResult?.error || waterResult?.error || analysesResult?.error || recentResult?.error;
+  const quickstartSteps = [
+    { done: (pointsResult.count ?? 0) > 0, href: "/survey/new", title: "Buat titik survei", description: "Mulai dengan mencatat lokasi survey." },
+    { done: (measurementsResult?.count ?? 0) > 0, href: "/geolistrik", title: "Masukkan pengukuran", description: "Tambahkan data hasil geolistrik." },
+    { done: (waterResult?.count ?? 0) > 0, href: "/water", title: "Catat kualitas air", description: "Simpan hasil uji sampel." },
+    { done: (analysesResult?.count ?? 0) > 0, href: "/analysis", title: "Tinjau analisis", description: "Lihat ringkasan hasil dan rekomendasi." },
+  ];
+  const completedSteps = quickstartSteps.filter((step) => step.done).length;
 
   return (
     <AppShell active="/dashboard" title="Beranda">
@@ -57,12 +65,15 @@ export default async function DashboardPage() {
             <Link href="/device"><Icon name="cpu" size={22} />Perangkat</Link>
           </nav>
           <section className="quickstart">
-            <div className="quickstart-h"><h2>Mulai cepat</h2><span>1/4</span></div>
-            <div className="bar"><i style={{ width: "25%" }} /></div>
-            <Link className="qs done" href="/survey/new"><span className="dot"><Icon name="check" size={14} /></span><span><b>Buat titik survei</b><small>Mulai dengan mencatat lokasi survey.</small></span><Icon name="chevron" size={18} /></Link>
-            <Link className="qs" href="/geolistrik"><span className="dot" /><span><b>Masukkan pengukuran</b><small>Tambahkan data hasil geolistrik.</small></span><Icon name="chevron" size={18} /></Link>
-            <Link className="qs" href="/water"><span className="dot" /><span><b>Catat kualitas air</b><small>Simpan hasil uji sampel.</small></span><Icon name="chevron" size={18} /></Link>
-            <Link className="qs" href="/analysis"><span className="dot" /><span><b>Tinjau analisis</b><small>Lihat ringkasan hasil dan rekomendasi.</small></span><Icon name="chevron" size={18} /></Link>
+            <div className="quickstart-h"><h2>Mulai cepat</h2><span>{completedSteps}/4</span></div>
+            <div className="bar"><i style={{ width: `${completedSteps / quickstartSteps.length * 100}%` }} /></div>
+            {quickstartSteps.map((step) => (
+              <Link className={`qs${step.done ? " done" : ""}`} href={step.href} key={step.title}>
+                <span className="dot">{step.done && <Icon name="check" size={14} />}</span>
+                <span><b>{step.title}</b><small>{step.description}</small></span>
+                <Icon name="chevron" size={18} />
+              </Link>
+            ))}
           </section>
           <div className="sec"><h2>Ringkasan Lapisan Wilayah</h2></div>
           <div className="card">
@@ -83,7 +94,6 @@ export default async function DashboardPage() {
           }) : (
             <div className="empty"><b>Belum ada pengukuran</b>Buat titik survei dan tambahkan hasil pengukuran untuk melihat ringkasan di sini.<p><Link className="btn sm" href="/survey/new">Survey Baru</Link></p></div>
           )}
-          <div className="placeholder-note">Pengukuran di dashboard berasal dari database Supabase. Data MySQL XAMPP lama belum dipindahkan.</div>
         </div>
       </div>
     </AppShell>
