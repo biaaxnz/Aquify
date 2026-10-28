@@ -3,6 +3,10 @@ config.php
 installed.lock
 .env
 .idea/
+node_modules/
+.next/
+out/
+.env*.local
 .venv/
 venv/
 __pycache__/

@@ -2,6 +2,10 @@
 
 Aquify berjalan dengan **PHP, CSS, JavaScript, dan MySQL/MariaDB** di XAMPP. Aplikasi tidak lagi membutuhkan Python atau Streamlit.
 
+## Versi baru tanpa PHP
+
+Aplikasi Next.js + TypeScript dan Supabase di `next-app/` kini mencakup peta interaktif, grafik sounding dan penampang 2D interpolasi, analisis aturan, integrasi Gemini opsional, sinkron Firebase opsional, serta endpoint ingest ESP32. Ini proyek terpisah; versi PHP dan database MySQL tetap utuh sebagai cadangan. Notifikasi push, serial USB/Web Serial, OTP khusus, dan migrasi data lama belum selesai. Baca `next-app/README.md` untuk instalasi, konfigurasi layanan, dan migrasi SQL sebelum menguji.
+
 ## Fitur
 - Dashboard, titik survei, peta Leaflet/OpenStreetMap, dan riwayat pengukuran.
 - Sinkronisasi Firebase Realtime Database ke MySQL dengan pencatatan payload mentah dan deduplikasi.
