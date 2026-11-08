@@ -177,7 +177,7 @@ export async function askGemini(formData: FormData) {
       headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
       body: JSON.stringify({
         systemInstruction: {
-          parts: [{ text: "Kamu asisten interpretasi data geolistrik dan kualitas air untuk Aquify. Jawab dalam bahasa Indonesia, bedakan data terukur dari dugaan, jelaskan keterbatasan resistivitas, jangan menjamin ada air atau memberi instruksi pengeboran sebagai kepastian. Sertakan rekomendasi verifikasi lapangan. Hasil hanya indikatif dan bukan pengganti inversi geofisika, uji laboratorium, atau penilaian ahli." }],
+          parts: [{ text: "Kamu asisten interpretasi data geolistrik dan kualitas air untuk Aquify. Jawab ringkas dalam bahasa Indonesia, bedakan data terukur dari dugaan, jelaskan keterbatasan resistivitas, jangan menjamin ada air atau memberi instruksi pengeboran sebagai kepastian. Sertakan rekomendasi verifikasi lapangan. Hasil hanya indikatif dan bukan pengganti inversi geofisika, uji laboratorium, atau penilaian ahli. Gunakan teks biasa dengan subjudul; jangan gunakan Markdown, simbol #, tanda **, atau garis pemisah." }],
         },
         contents: [{
           role: "user",
@@ -186,10 +186,10 @@ export async function askGemini(formData: FormData) {
             analisis_aturan: analysis.data.result,
             pengukuran_geolistrik: measurements.data ?? [],
             sampel_air: water.data ?? [],
-            tugas: "Jelaskan temuan, risiko/ketidakpastian, dan langkah verifikasi berikutnya secara ringkas dengan subjudul.",
+            tugas: "Jelaskan temuan utama, risiko dan ketidakpastian, arti hasil sampel air bila tersedia, serta langkah verifikasi berikutnya. Buat paling banyak empat subjudul dan akhiri dengan satu kalimat singkat bahwa hasil ini indikatif.",
           }) }],
         }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 1200 },
+        generationConfig: { temperature: 0.2, maxOutputTokens: 4096 },
       }),
       signal: AbortSignal.timeout(45000),
       cache: "no-store",
@@ -198,12 +198,23 @@ export async function askGemini(formData: FormData) {
     redirect("/analysis?error=Tidak%20dapat%20menghubungi%20Gemini.%20Periksa%20koneksi%20server%20dan%20coba%20lagi.");
   }
   const payload = await response.json().catch(() => null) as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string; thought?: boolean }> }; finishReason?: string }>;
+    promptFeedback?: { blockReason?: string };
     error?: { message?: string };
   } | null;
-  const answer = payload?.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("").trim();
+  const finishReason = payload?.candidates?.[0]?.finishReason;
+  if (finishReason === "MAX_TOKENS") {
+    redirect("/analysis?error=Jawaban%20Gemini%20terpotong%20karena%20mencapai%20batas%20token.%20Coba%20lagi%20atau%20gunakan%20prompt%20yang%20lebih%20ringkas.");
+  }
+  const answer = payload?.candidates?.[0]?.content?.parts
+    ?.filter((part) => !part.thought)
+    .map((part) => part.text ?? "")
+    .join("")
+    .trim();
   if (!response.ok || !answer) {
     console.error("Aquify Gemini request failed", response.status, payload?.error?.message ?? "Empty model response");
+    const blockReason = payload?.promptFeedback?.blockReason;
+    if (blockReason) redirect(`/analysis?error=${encodeURIComponent(`Gemini memblokir permintaan (${blockReason}). Ubah pertanyaan atau periksa pengaturan keamanan model.`)}`);
     const message = response.status === 429
       ? "Kuota Gemini sedang habis atau dibatasi. Coba lagi nanti."
       : response.status === 401 || response.status === 403
