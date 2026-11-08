@@ -13,6 +13,7 @@ export function RailController() {
     const setOpen = (open: boolean) => {
       rail.classList.toggle("open", open);
       toggle.setAttribute("aria-expanded", String(open));
+      toggle.setAttribute("aria-label", open ? "Tutup menu" : "Buka menu");
       backdrop.hidden = !open;
       document.body.classList.toggle("rail-open", open);
       if (open) (rail.querySelector(".rail-nav a[aria-current]") as HTMLElement | null)?.focus();
