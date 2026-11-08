@@ -218,3 +218,64 @@ export async function askGemini(formData: FormData) {
   if (error) redirect(`/analysis?error=${encodeURIComponent(error.message)}`);
   redirect(`/analysis?message=Analisis%20Gemini%20selesai%20untuk%20${encodeURIComponent(pointId)}`);
 }
+
+export async function testGeminiConnection() {
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey) redirect("/settings?error=Gemini%20belum%20diatur.%20Tambahkan%20GEMINI_API_KEY%20di%20konfigurasi%20server.");
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (profileError) redirect(`/settings?error=${encodeURIComponent(profileError.message)}`);
+  if (profile?.role !== "admin") redirect("/settings?error=Aksi%20ini%20hanya%20tersedia%20untuk%20admin.");
+
+  const model = process.env.GEMINI_MODEL?.trim() || "gemini-3.6-flash";
+  let response: Response;
+  try {
+    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: "Balas hanya dengan kata: OK" }] }],
+        generationConfig: { temperature: 0, maxOutputTokens: 256 },
+      }),
+      signal: AbortSignal.timeout(40000),
+      cache: "no-store",
+    });
+  } catch {
+    redirect("/settings?error=Gagal%20menghubungi%20Gemini.%20Periksa%20koneksi%20server%20dan%20coba%20lagi.");
+  }
+
+  const payload = await response.json().catch(() => null) as {
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string; thought?: boolean }> }; finishReason?: string }>;
+    promptFeedback?: { blockReason?: string };
+    error?: { message?: string };
+  } | null;
+  if (!response.ok) {
+    const message = response.status === 429
+      ? "Kuota Gemini sedang habis atau dibatasi. Coba lagi nanti."
+      : response.status === 401 || response.status === 403
+        ? "Kunci Gemini ditolak. Periksa GEMINI_API_KEY di konfigurasi server."
+        : payload?.error?.message || `Gemini merespons HTTP ${response.status}.`;
+    redirect(`/settings?error=${encodeURIComponent(message)}`);
+  }
+
+  const answer = payload?.candidates?.[0]?.content?.parts
+    ?.filter((part) => !part.thought)
+    .map((part) => part.text ?? "")
+    .join("")
+    .trim();
+  if (!answer) {
+    const reason = payload?.candidates?.[0]?.finishReason ?? payload?.promptFeedback?.blockReason;
+    const detail = reason ? ` (${reason})` : "";
+    redirect(`/settings?error=${encodeURIComponent(`Gemini tidak mengembalikan teks${detail}. Periksa batas token, model, atau kuota.`)}`);
+  }
+
+  redirect(`/settings?message=${encodeURIComponent(`Tes Gemini berhasil. Model ${model} menjawab: ${answer.slice(0, 80)}`)}`);
+}

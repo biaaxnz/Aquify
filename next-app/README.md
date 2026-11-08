@@ -43,7 +43,7 @@ Endpoint pemeriksaan awal: `/api/mobile/ping`.
 
 ### Integrasi opsional
 
-- **Gemini:** isi `GEMINI_API_KEY` dan `GEMINI_MODEL` di environment server (Vercel Environment Variables untuk deployment). Jangan mengirim kunci melalui chat atau browser.
+- **Gemini:** isi `GEMINI_API_KEY` dan `GEMINI_MODEL` di environment server (Vercel Environment Variables untuk deployment). Jangan mengirim kunci melalui chat atau browser. Setelah deploy, admin dapat membuka **Pengaturan** dan menjalankan tes koneksi Gemini; tes memakai batas 256 token dan mengirim kunci hanya dari server.
 - **Firebase Realtime Database:** isi `FIREBASE_DATABASE_URL`, opsional `FIREBASE_DATABASE_TOKEN`, `FIREBASE_MEASUREMENTS_PATH`, dan `FIREBASE_WATER_PATH`. Sinkron manual tersedia di menu Sinkron. Baris Firebase harus merujuk ke kode titik Aquify milik akun yang sedang masuk; baris tanpa titik yang cocok dihitung tidak valid.
 - **ESP32:** isi `SUPABASE_SERVICE_ROLE_KEY` dan `ESP32_INGEST_TOKEN` hanya di environment server. Kirim HTTPS POST ke `/api/device/ingest` dengan header `Authorization: Bearer <token>` dan objek `{"point":"KODE-TITIK","device":"ESP32-01","measurements":[{"spacing_m":1,"dv_mv":22.4,"i_ma":2.1,"x_m":5}]}`. Payload menerima hingga 200 baris; kirim titik yang sudah terdaftar. Respons JSON berisi jumlah diterima, disimpan, duplikat, dan tidak valid.
 - Setelah mengubah `.env.local`, hentikan lalu jalankan ulang `npm run dev`. Untuk Vercel, tambahkan variabel yang sama pada pengaturan proyek lalu redeploy.

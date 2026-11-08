@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { addMeasurement, addWaterSample, askGemini, runRuleAnalysis } from "@/app/actions";
+import { addMeasurement, addWaterSample, askGemini, runRuleAnalysis, testGeminiConnection } from "@/app/actions";
 import { syncFirebase } from "@/app/integration-actions";
 import { AppShell } from "@/components/app-shell";
 import { Icon } from "@/components/icon";
@@ -190,6 +190,13 @@ export default async function ModulePage({
         <div className="li"><span className="li-ic g"><Icon name="check" /></span><span className="li-b"><b>Supabase Auth + PostgreSQL</b><small>Terhubung</small></span></div>
         <div className="li"><span className="li-ic m"><Icon name="refresh" /></span><span className="li-b"><b>Firebase</b><small>{process.env.FIREBASE_DATABASE_URL ? "URL tersedia di server" : "Belum dikonfigurasi"}</small></span></div>
         <div className="li"><span className="li-ic m"><Icon name="sparkles" /></span><span className="li-b"><b>Gemini</b><small>{process.env.GEMINI_API_KEY ? "Kunci tersedia di server" : "Belum dikonfigurasi"}</small></span></div>
+        {profileResult.data?.role === "admin" && <section className="card" style={{ marginTop: 16 }}>
+          <h2>Tes koneksi Gemini</h2>
+          <p className="hint">Mengirim satu permintaan singkat ke Gemini dengan batas 256 token. Kunci API tetap tersimpan di server.</p>
+          <form action={testGeminiConnection}>
+            <button className="btn teal sm" type="submit" disabled={!process.env.GEMINI_API_KEY}>Tes koneksi Gemini</button>
+          </form>
+        </section>}
       </div>}
     </AppShell>
   );
