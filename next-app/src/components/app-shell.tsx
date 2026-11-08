@@ -44,8 +44,7 @@ export async function AppShell({
     <>
       <RailController />
       <button className="railtoggle" id="railToggle" type="button" aria-label="Buka menu" aria-expanded="false" aria-controls="rail">
-        <span className="menu-open-icon"><Icon name="more" size={22} /></span>
-        <span className="menu-close-icon"><Icon name="x" size={22} /></span>
+        <Icon name="more" size={22} />
       </button>
       <div className="rail-backdrop" id="railBackdrop" hidden />
       <aside className="rail" id="rail" aria-label="Menu" tabIndex={-1}>
