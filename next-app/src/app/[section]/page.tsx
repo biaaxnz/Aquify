@@ -113,14 +113,14 @@ export default async function ModulePage({
           </form> : <div className="empty"><b>Buat titik survey dahulu</b><Link href="/survey/new">Buat titik survey</Link></div>}
         </section>
         <div className="sec"><h2>Sampel terbaru</h2></div>
-        {water.length ? <div className="card table-wrap"><table className="data-table"><thead><tr><th>Titik</th><th>TDS</th><th>EC</th><th>pH</th><th>Suhu</th><th>Penilaian indikatif</th><th>Waktu</th></tr></thead><tbody>
+        {water.length ? <div className="card table-wrap"><table className="data-table"><thead><tr><th>Titik</th><th>TDS</th><th>EC</th><th>pH</th><th>Suhu</th><th>Kekeruhan</th><th>Penilaian indikatif</th><th>Waktu</th></tr></thead><tbody>
           {water.map((row) => {
             const p = Array.isArray(row.points) ? row.points[0] : row.points;
             const assessment = assessWater(row);
-            return <tr key={row.id}><td>{p?.name ?? "Titik"}</td><td>{row.tds_ppm ?? "–"}</td><td>{row.ec_us ?? "–"}</td><td>{row.ph ?? "–"}</td><td>{row.temp_c ?? "–"}</td><td>{assessment.tdsClass ?? (assessment.notes.join(" ") || "Data belum cukup")}</td><td>{new Date(row.measured_at).toLocaleDateString("id-ID")}</td></tr>;
+            return <tr key={row.id}><td>{p?.name ?? "Titik"}</td><td>{row.tds_ppm ?? "–"}</td><td>{row.ec_us ?? "–"}</td><td>{row.ph ?? "–"}</td><td>{row.temp_c ?? "–"}</td><td>{row.turbidity_ntu ?? "–"}</td><td><strong>{assessment.overallClass}</strong><br /><small>{assessment.summary}</small></td><td>{new Date(row.measured_at).toLocaleDateString("id-ID")}</td></tr>;
           })}
         </tbody></table></div> : <div className="empty"><b>Belum ada sampel</b>Tambahkan hasil uji air untuk melihatnya di sini.</div>}
-        <p className="hint">Penilaian ini hanya acuan awal dari TDS/pH, bukan sertifikasi air layak minum; lakukan uji laboratorium.</p>
+        <p className="hint">Indikator: pH (6,5–8,5), TDS (10–300 ppm), EC (&lt;400 µS/cm), suhu (20–28 °C; suhu udara belum dibandingkan), dan kekeruhan (&lt;3 NTU). Nilai gabungan mengikuti parameter terburuk; jika ada indikator kosong atau di luar rentang tabel, hasil tidak dinyatakan “paling baik”. Ini hanya skrining indikatif, bukan penetapan air aman diminum—perlu uji laboratorium.</p>
       </>}
 
       {section === "map" && <div className="stack">

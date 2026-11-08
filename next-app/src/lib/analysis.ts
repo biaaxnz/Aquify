@@ -31,7 +31,20 @@ export type WaterAssessment = {
   tds: number | null;
   ec: number | null;
   ph: number | null;
+  temp: number | null;
+  turbidity: number | null;
   tdsClass: string | null;
+  overallClass: string;
+  summary: string;
+  parameters: Array<{
+    label: string;
+    value: number | null;
+    unit: string;
+    range: string;
+    status: string;
+    concern: boolean;
+    grade: 0 | 1 | 2 | null;
+  }>;
   waterResistivity: number | null;
   expectedResistivity: [number, number] | null;
   saline: boolean;
@@ -90,23 +103,93 @@ export function assessWater(sample: {
   tds_ppm: number | null;
   ec_us: number | null;
   ph: number | null;
+  temp_c?: number | null;
+  turbidity_ntu?: number | null;
 }): WaterAssessment {
   const tds = sample.tds_ppm;
-  const ec = sample.ec_us ?? (tds === null ? null : tds / 0.64);
+  const measuredEc = sample.ec_us ?? null;
+  const ec = measuredEc ?? (tds === null ? null : tds / 0.64);
   const ph = sample.ph;
-  const notes: string[] = [];
-  let tdsClass: string | null = null;
-  if (tds !== null) {
-    tdsClass = tds < 300 ? "sangat baik" : tds < 600 ? "baik" : tds < 900 ? "cukup" : tds < 1200 ? "buruk" : "tidak layak minum (payau/asin)";
-    notes.push(`TDS ${Math.round(tds)} ppm: ${tdsClass}.`);
-  }
-  if (ph !== null) notes.push(ph < 6.5 || ph > 8.5 ? `pH ${ph.toFixed(1)} di luar kisaran 6,5–8,5.` : `pH ${ph.toFixed(1)} dalam kisaran wajar.`);
+  const temp = sample.temp_c ?? null;
+  const turbidity = sample.turbidity_ntu ?? null;
+  const parameters: WaterAssessment["parameters"] = [
+    {
+      label: "pH",
+      value: ph,
+      unit: "",
+      range: "7,0–7,9 paling baik; 6,5–7,0 atau 8,0–8,5 baik",
+      status: ph === null ? "Belum diukur" : ph < 6.5 || ph > 8.5 ? "Perlu perhatian" : ph >= 7 && ph < 8 ? "Paling baik (indikatif)" : "Baik (indikatif)",
+      concern: ph !== null && (ph < 6.5 || ph > 8.5),
+      grade: ph === null ? null : ph < 6.5 || ph > 8.5 ? 0 : ph >= 7 && ph < 8 ? 2 : 1,
+    },
+    {
+      label: "TDS",
+      value: tds,
+      unit: "ppm",
+      range: "10–<50 paling baik; 50–300 baik; >300 perlu perhatian",
+      status: tds === null ? "Belum diukur" : tds > 300 ? "Perlu perhatian" : tds < 10 ? "Di luar rentang acuan" : tds < 50 ? "Paling baik (indikatif)" : "Baik (indikatif)",
+      concern: tds !== null && tds > 300,
+      grade: tds === null || tds < 10 ? null : tds > 300 ? 0 : tds < 50 ? 2 : 1,
+    },
+    {
+      label: "EC",
+      value: measuredEc,
+      unit: "µS/cm",
+      range: "<100 paling baik; 100–400 baik; >400 perlu perhatian",
+      status: measuredEc === null ? "Belum diukur" : measuredEc > 400 ? "Perlu perhatian" : measuredEc < 100 ? "Paling baik (indikatif)" : "Baik (indikatif)",
+      concern: measuredEc !== null && measuredEc > 400,
+      grade: measuredEc === null ? null : measuredEc > 400 ? 0 : measuredEc < 100 ? 2 : 1,
+    },
+    {
+      label: "Suhu",
+      value: temp,
+      unit: "°C",
+      range: "20–22 paling baik; 23–28 baik; <15 perlu perhatian; pembanding suhu udara belum tersedia",
+      status: temp === null ? "Belum diukur" : temp < 15 ? "Perlu perhatian" : temp >= 20 && temp <= 22 ? "Paling baik (indikatif)" : temp >= 23 && temp <= 28 ? "Baik (indikatif)" : "Perlu konteks",
+      concern: temp !== null && temp < 15,
+      grade: temp === null || (temp >= 15 && temp < 20) || (temp > 22 && temp < 23) || temp > 28
+        ? null
+        : temp < 15 ? 0 : temp >= 20 && temp <= 22 ? 2 : 1,
+    },
+    {
+      label: "Kekeruhan",
+      value: turbidity,
+      unit: "NTU",
+      range: "<1 paling baik; 1–3 baik; >3 perlu perhatian",
+      status: turbidity === null ? "Belum diukur" : turbidity > 3 ? "Perlu perhatian" : turbidity < 1 ? "Paling baik (indikatif)" : "Baik (indikatif)",
+      concern: turbidity !== null && turbidity > 3,
+      grade: turbidity === null ? null : turbidity > 3 ? 0 : turbidity < 1 ? 2 : 1,
+    },
+  ];
+  const hasAnyValue = parameters.some((parameter) => parameter.value !== null);
+  const hasConcern = parameters.some((parameter) => parameter.concern);
+  const hasIncompleteIndicator = parameters.some((parameter) => parameter.value === null || parameter.grade === null);
+  const overallClass = !hasAnyValue
+    ? "Data belum cukup"
+    : hasConcern
+      ? "Kurang / perlu tindak lanjut"
+      : hasIncompleteIndicator
+        ? "Data belum lengkap / perlu interpretasi"
+        : parameters.every((parameter) => parameter.grade === 2)
+          ? "Paling baik (indikatif)"
+          : "Baik (indikatif)";
+  const tdsClass = parameters[1].status;
+  const concerns = parameters.filter((parameter) => parameter.concern || (parameter.value !== null && parameter.grade === null));
+  const summary = concerns.length
+    ? concerns.map((parameter) => `${parameter.label}: ${parameter.status.toLowerCase()}`).join("; ")
+    : hasIncompleteIndicator ? "Lengkapi semua indikator dan tinjau rentang yang memerlukan konteks." : "Semua indikator terukur berada pada rentang acuan baik.";
+  const notes = concerns.map((parameter) => `${parameter.label} ${parameter.value}${parameter.unit ? ` ${parameter.unit}` : ""}: ${parameter.status.toLowerCase()}.`);
   const waterResistivity = ec !== null && ec > 0 ? 10000 / ec : null;
   return {
     tds,
     ec,
     ph,
+    temp,
+    turbidity,
     tdsClass,
+    overallClass,
+    summary,
+    parameters,
     waterResistivity,
     expectedResistivity: waterResistivity === null ? null : [3 * waterResistivity, 9 * waterResistivity],
     saline: tds !== null && tds >= 1200,

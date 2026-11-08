@@ -33,6 +33,7 @@ export default async function PointDetailPage({ params }: { params: Promise<{ id
   return (
     <AppShell active="/history" title="Detail Survey">
       <div className="page-title"><h2>{point.name}</h2><p>Kode {point.code} · {point.survey_type === "water" ? "Kualitas air" : "Geolistrik"}</p></div>
+      <a className="btn outline sm" href={`/api/points/${point.id}/report`}>Unduh laporan PDF</a>
       {(point.latitude !== null && point.longitude !== null) && <p className="hint">Koordinat: {point.latitude}, {point.longitude}</p>}
       <div className="statcards">
         <div><b>{rows.length}</b><small>Data geolistrik</small></div>
@@ -55,7 +56,7 @@ export default async function PointDetailPage({ params }: { params: Promise<{ id
         {savedAnalysis?.result && typeof savedAnalysis.result === "object" && !Array.isArray(savedAnalysis.result) && Array.isArray((savedAnalysis.result as { layers?: unknown }).layers)
           ? <LayerColumn layers={(savedAnalysis.result as { layers: Parameters<typeof LayerColumn>[0]["layers"] }).layers} />
           : null}
-        {latestWater?.notes.map((note) => <p className="hint" key={note}>{note}</p>)}
+        {latestWater && <div className="placeholder-note"><b>Penilaian kualitas air indikatif: {latestWater.overallClass}</b><p>{latestWater.summary}</p><small>Bukan penetapan air aman diminum. Konfirmasi dengan uji laboratorium.</small></div>}
         <Link className="tx-link" href="/analysis">Buka analisis dan Gemini</Link>
         {savedAnalysis?.ai_text && <div className="placeholder-note"><b>Interpretasi Gemini</b><p style={{ whiteSpace: "pre-wrap" }}>{savedAnalysis.ai_text}</p></div>}
       </section>

@@ -5,8 +5,22 @@ import { Icon } from "@/components/icon";
 import { createClient } from "@/lib/supabase/server";
 
 function greeting() {
-  const hour = new Date().getHours();
-  return hour < 11 ? "Selamat pagi" : hour < 15 ? "Selamat siang" : hour < 19 ? "Selamat sore" : "Selamat malam";
+  const timeParts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Jakarta",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date());
+  const hour = Number(timeParts.find((part) => part.type === "hour")?.value);
+  const minute = Number(timeParts.find((part) => part.type === "minute")?.value);
+  const time = hour * 60 + minute;
+  return time < 11 * 60 + 30
+    ? "Selamat pagi"
+    : time < 15 * 60
+      ? "Selamat siang"
+      : time < 18 * 60
+        ? "Selamat sore"
+        : "Selamat malam";
 }
 
 export default async function DashboardPage() {
@@ -30,7 +44,6 @@ export default async function DashboardPage() {
   const quickstartSteps = [
     { done: (pointsResult.count ?? 0) > 0, href: "/survey/new", title: "Buat titik survei", description: "Mulai dengan mencatat lokasi survey." },
     { done: (measurementsResult?.count ?? 0) > 0, href: "/geolistrik", title: "Masukkan pengukuran", description: "Tambahkan data hasil geolistrik." },
-    { done: (waterResult?.count ?? 0) > 0, href: "/water", title: "Catat kualitas air", description: "Simpan hasil uji sampel." },
     { done: (analysesResult?.count ?? 0) > 0, href: "/analysis", title: "Tinjau analisis", description: "Lihat ringkasan hasil dan rekomendasi." },
   ];
   const completedSteps = quickstartSteps.filter((step) => step.done).length;
@@ -64,17 +77,19 @@ export default async function DashboardPage() {
             <Link className="q3" href="/map"><Icon name="map" size={22} />Peta</Link>
             <Link href="/device"><Icon name="cpu" size={22} />Perangkat</Link>
           </nav>
-          <section className="quickstart">
-            <div className="quickstart-h"><h2>Mulai cepat</h2><span>{completedSteps}/4</span></div>
-            <div className="bar"><i style={{ width: `${completedSteps / quickstartSteps.length * 100}%` }} /></div>
-            {quickstartSteps.map((step) => (
-              <Link className={`qs${step.done ? " done" : ""}`} href={step.href} key={step.title}>
-                <span className="dot">{step.done && <Icon name="check" size={14} />}</span>
-                <span><b>{step.title}</b><small>{step.description}</small></span>
-                <Icon name="chevron" size={18} />
-              </Link>
-            ))}
-          </section>
+          {completedSteps < quickstartSteps.length && (
+            <section className="quickstart">
+              <div className="quickstart-h"><h2>Mulai cepat</h2><span>{completedSteps}/{quickstartSteps.length}</span></div>
+              <div className="bar"><i style={{ width: `${completedSteps / quickstartSteps.length * 100}%` }} /></div>
+              {quickstartSteps.map((step) => (
+                <Link className={`qs${step.done ? " done" : ""}`} href={step.href} key={step.title}>
+                  <span className="dot">{step.done && <Icon name="check" size={14} />}</span>
+                  <span><b>{step.title}</b><small>{step.description}</small></span>
+                  <Icon name="chevron" size={18} />
+                </Link>
+              ))}
+            </section>
+          )}
           <div className="sec"><h2>Ringkasan Lapisan Wilayah</h2></div>
           <div className="card">
             <div className="empty-sm">Belum ada hasil analisis. Tambahkan pengukuran untuk mulai membangun ringkasan lapisan.</div>
