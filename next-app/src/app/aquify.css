@@ -60,6 +60,20 @@ img{max-width:100%}
 .iconbtn{width:42px;height:42px;flex:0 0 42px;border-radius:13px;background:#fff;border:1px solid var(--line);display:grid;place-items:center;color:var(--ink);cursor:pointer;position:relative;padding:0;font:inherit}
 .iconbtn:hover{background:#F0F6F6;color:var(--ink)}
 .iconbtn .dot{position:absolute;top:9px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--bad);border:2px solid #fff}
+.notification-count{position:absolute;top:-5px;right:-5px;min-width:19px;height:19px;padding:0 5px;border:2px solid #fff;border-radius:99px;background:var(--bad);color:#fff;font:700 .65rem/15px var(--f-body);text-align:center}
+.notification-summary{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+.notification-list{display:grid;gap:10px}
+.notification-item{padding:14px;border:1px solid var(--line);border-radius:14px;background:#fff}
+.notification-item.is-unread{border-color:#b9e3dd;background:#f4fbfa}
+.notification-item-main{display:flex;gap:11px;align-items:flex-start}
+.notification-status{width:9px;height:9px;flex:0 0 9px;margin-top:7px;border-radius:50%;background:var(--teal)}
+.is-read .notification-status{background:#b4c3c5}
+.notification-item p{margin:4px 0;color:var(--muted);font-size:.86rem}
+.notification-item small{color:var(--muted);font-size:.74rem}
+.notification-actions{display:flex;gap:16px;margin-top:8px}
+.notification-read{padding:0;border:0;background:none;font:600 .85rem var(--f-body);cursor:pointer}
+.report-download{display:grid;justify-items:start;gap:8px;margin-bottom:12px}
+.report-download .alert{margin:0}
 .tx-link{font-weight:600;font-size:.85rem;color:var(--primary)}
 
 /* ===== Komponen dasar ===== */

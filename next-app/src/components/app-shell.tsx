@@ -2,8 +2,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { signOut } from "@/app/auth-actions";
+import { DownloadNotificationListener } from "@/components/download-notification-listener";
 import { Icon } from "@/components/icon";
+import { FormDraftRestorer } from "@/components/form-draft-restorer";
+import { NotificationBell } from "@/components/notification-bell";
 import { RailController } from "@/components/rail-controller";
+import { RefreshButton } from "@/components/refresh-button";
 import { createClient } from "@/lib/supabase/server";
 
 const navigation = [
@@ -43,6 +47,8 @@ export async function AppShell({
   return (
     <>
       <RailController />
+      <FormDraftRestorer key={active} />
+      <DownloadNotificationListener />
       <button className="railtoggle" id="railToggle" type="button" aria-label="Buka menu" aria-expanded="false" aria-controls="rail">
         <Icon name="more" size={22} />
       </button>
@@ -75,7 +81,7 @@ export async function AppShell({
       <main id="main" className="app-main">
         <div className="appbar">
           <h1>{title}</h1>
-          <div className="appbar-r"><Link className="iconbtn" href="/notifications" aria-label="Notifikasi"><Icon name="bell" /></Link></div>
+          <div className="appbar-r"><RefreshButton /><NotificationBell /></div>
         </div>
         <div className="route-content">{children}</div>
       </main>

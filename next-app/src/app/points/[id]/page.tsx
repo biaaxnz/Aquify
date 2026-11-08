@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { addMeasurement, addWaterSample, runRuleAnalysis } from "@/app/actions";
 import { AppShell } from "@/components/app-shell";
 import { LayerColumn, Section2DPlot, SoundingPlot } from "@/components/resistivity-plots";
+import { ReportDownloadButton } from "@/components/report-download-button";
 import { createClient } from "@/lib/supabase/server";
 import { assessWater, buildSounding } from "@/lib/analysis";
 
@@ -33,7 +34,7 @@ export default async function PointDetailPage({ params }: { params: Promise<{ id
   return (
     <AppShell active="/history" title="Detail Survey">
       <div className="page-title"><h2>{point.name}</h2><p>Kode {point.code} · {point.survey_type === "water" ? "Kualitas air" : "Geolistrik"}</p></div>
-      <a className="btn outline sm" href={`/api/points/${point.id}/report`}>Unduh laporan PDF</a>
+      <ReportDownloadButton pointId={point.id} pointCode={point.code} />
       {(point.latitude !== null && point.longitude !== null) && <p className="hint">Koordinat: {point.latitude}, {point.longitude}</p>}
       <div className="statcards">
         <div><b>{rows.length}</b><small>Data geolistrik</small></div>

@@ -6,6 +6,7 @@ import { AppShell } from "@/components/app-shell";
 import { Icon } from "@/components/icon";
 import { SurveyMap } from "@/components/survey-map";
 import { LayerColumn, Section2DPlot, SoundingPlot } from "@/components/resistivity-plots";
+import { NotificationCenter } from "@/components/notification-center";
 import { analyzeSounding, assessWater, buildSounding, type RuleAnalysis } from "@/lib/analysis";
 import { createClient } from "@/lib/supabase/server";
 
@@ -176,7 +177,7 @@ export default async function ModulePage({
         {devices.length ? <div className="card table-wrap"><table className="data-table"><thead><tr><th>Perangkat</th><th>Jenis</th><th>Sumber</th><th>Waktu</th></tr></thead><tbody>{devices.map((row) => <tr key={row.id}><td>{row.device_id ?? "ESP32"}</td><td>{row.reading_type}</td><td>{row.source}</td><td>{new Date(row.measured_at).toLocaleString("id-ID")}</td></tr>)}</tbody></table></div> : <div className="empty"><b>Belum ada perangkat</b>Belum ada data perangkat yang dikirim.</div>}
       </>}
 
-      {section === "notifications" && <div className="empty"><b>Belum ada notifikasi</b>Pemberitahuan dan notifikasi push belum dipindahkan dari versi PHP.</div>}
+      {section === "notifications" && <NotificationCenter />}
       {section === "sync" && <div className="card">
         <h2>Sinkron Firebase Realtime Database</h2>
         <p className="muted">Tarik data baru dari path measurements dan water di Firebase. Setiap baris harus berisi kode survey pada field point, point_id, titik, atau site; data duplikat akan dilewati.</p>
