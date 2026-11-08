@@ -1,10 +1,10 @@
-/* Aquify — mengikuti mockup aplikasi: navy-teal, kartu putih membulat, Plus Jakarta Sans + Inter, angka mono. */
+/* Aquify — mengikuti mockup aplikasi: navy-teal, kartu putih membulat, Poppins + Inter, angka mono. */
 :root{
   --bg:#F4F8F8; --card:#FFFFFF; --ink:#102428; --muted:#6A8085; --line:#E1EBEB; --line2:#D3E0E0;
   --primary:#145C84; --primary-d:#0F4A6B; --navy:#0F4660; --navy2:#145C84; --teal:#2CB4A4; --teal-d:#1E9487; --mint:#34E0B4;
   --ok:#17806B; --ok-bg:#E0F4EC; --warn:#B3650F; --warn-bg:#F8ECDC; --bad:#C4432F; --bad-bg:#FCECE8; --info:#1D5F86; --info-bg:#E4ECF4; --mute:#5E7378; --mute-bg:#EAF0F0;
   --r:16px; --r-sm:12px;
-  --f-head:"Plus Jakarta Sans",system-ui,sans-serif; --f-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif; --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --f-head:"Poppins",system-ui,sans-serif; --f-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif; --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
   --tab-h:72px;
 }
 *{box-sizing:border-box}
@@ -406,7 +406,7 @@ input[aria-invalid=true]{border-color:var(--bad);box-shadow:0 0 0 3px rgba(196,6
 /* ===== Menu samping tersembunyi (titik tiga) ===== */
 .railtoggle,.rail-x{display:none}
 @media(max-width:1023px){
-  .railtoggle{display:grid;position:absolute;left:16px;top:18px;z-index:130;width:44px;height:44px;border-radius:14px;background:var(--card);border:1px solid var(--line);color:var(--ink);place-items:center;cursor:pointer;box-shadow:0 2px 10px rgba(16,36,40,.08);padding:0}
+  .railtoggle{display:grid;position:absolute;left:16px;top:max(18px,env(safe-area-inset-top));z-index:130;width:44px;height:44px;border-radius:14px;background:var(--card);border:1px solid var(--line);color:var(--ink);place-items:center;cursor:pointer;box-shadow:0 2px 10px rgba(16,36,40,.08);padding:0}
   .railtoggle:hover{background:#EEF5F5}
   body.rail-open .railtoggle{visibility:hidden}
   .rt-dot{position:absolute;top:8px;right:9px;width:9px;height:9px;border-radius:50%;background:var(--bad);border:2px solid #fff}
@@ -429,7 +429,7 @@ input[aria-invalid=true]{border-color:var(--bad);box-shadow:0 0 0 3px rgba(196,6
   .rail .who>span:last-child{display:block;flex:1;min-width:0}
   .rail .who b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.88rem}
   .rail .who small{display:block;color:#C3DBE0;font-size:.74rem}
-  .appbar{padding-left:54px}
+  .appbar{min-height:44px;padding-left:54px}
 }
 @media(min-width:1024px){
   .app-main{margin-left:0;padding:34px 44px 60px 84px}
