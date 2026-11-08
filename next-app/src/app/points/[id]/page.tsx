@@ -7,6 +7,7 @@ import { LayerColumn, Section2DPlot, SoundingPlot } from "@/components/resistivi
 import { ReportDownloadButton } from "@/components/report-download-button";
 import { createClient } from "@/lib/supabase/server";
 import { assessWater, buildSounding } from "@/lib/analysis";
+import { formatInterpretationText } from "@/lib/interpretation-text";
 
 export default async function PointDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -59,7 +60,7 @@ export default async function PointDetailPage({ params }: { params: Promise<{ id
           : null}
         {latestWater && <div className="placeholder-note"><b>Penilaian kualitas air indikatif: {latestWater.overallClass}</b><p>{latestWater.summary}</p><small>Bukan penetapan air aman diminum. Konfirmasi dengan uji laboratorium.</small></div>}
         <Link className="tx-link" href="/analysis">Buka analisis dan Gemini</Link>
-        {savedAnalysis?.ai_text && <div className="placeholder-note"><b>Interpretasi Gemini</b><p style={{ whiteSpace: "pre-wrap" }}>{savedAnalysis.ai_text}</p></div>}
+        {savedAnalysis?.ai_text && <div className="placeholder-note"><b>Interpretasi Gemini</b>{formatInterpretationText(savedAnalysis.ai_text).map((line, index) => <p key={`${index}-${line}`}>{line}</p>)}</div>}
       </section>
       <div className="sec"><h2>Tambah pengukuran</h2></div>
       <section className="card">

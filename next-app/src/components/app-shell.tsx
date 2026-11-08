@@ -7,7 +7,6 @@ import { Icon } from "@/components/icon";
 import { FormDraftRestorer } from "@/components/form-draft-restorer";
 import { NotificationBell } from "@/components/notification-bell";
 import { RailController } from "@/components/rail-controller";
-import { RefreshButton } from "@/components/refresh-button";
 import { createClient } from "@/lib/supabase/server";
 
 const navigation = [
@@ -81,7 +80,7 @@ export async function AppShell({
       <main id="main" className="app-main">
         <div className="appbar">
           <h1>{title}</h1>
-          <div className="appbar-r"><RefreshButton /><NotificationBell /></div>
+          <div className="appbar-r"><NotificationBell /></div>
         </div>
         <div className="route-content">{children}</div>
       </main>

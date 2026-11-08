@@ -1,7 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { signUp } from "@/app/auth-actions";
 import { AuthBrand } from "@/components/auth-brand";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function RegisterPage({
   searchParams,
@@ -9,6 +11,10 @@ export default async function RegisterPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const params = await searchParams;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) redirect("/dashboard");
+
   return (
     <div className="auth-shell">
       <AuthBrand />

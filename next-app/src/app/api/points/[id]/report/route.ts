@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import { createClient } from "@/lib/supabase/server";
+import { formatInterpretationText } from "@/lib/interpretation-text";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -158,6 +159,156 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+function resistivityColor(value: number) {
+  if (value < 10) return rgb(0.66, 0.26, 0.18);
+  if (value < 25) return rgb(0.79, 0.54, 0.17);
+  if (value < 150) return rgb(0.05, 0.49, 0.53);
+  if (value < 500) return rgb(0.55, 0.56, 0.47);
+  return rgb(0.29, 0.31, 0.34);
+}
+
+function drawSection2D(
+  ctx: PdfContext,
+  rows: Array<{ x_m: number | null; spacing_m: number; rho_a: number }>,
+) {
+  const grouped = new Map<string, number[]>();
+  for (const row of rows) {
+    if (row.x_m === null || !Number.isFinite(row.x_m) || row.spacing_m <= 0 || row.rho_a <= 0) continue;
+    const key = `${row.x_m.toFixed(2)}|${row.spacing_m.toFixed(2)}`;
+    grouped.set(key, [...(grouped.get(key) ?? []), row.rho_a]);
+  }
+  const points = [...grouped.entries()].map(([key, values]) => {
+    const [x, spacing] = key.split("|").map(Number);
+    const sorted = values.sort((a, b) => a - b);
+    const middle = Math.floor(sorted.length / 2);
+    const rho = sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+    return { x, spacing, rho };
+  });
+  const positions = [...new Set(points.map((point) => point.x))].sort((a, b) => a - b);
+  const spacings = [...new Set(points.map((point) => point.spacing))].sort((a, b) => a - b);
+
+  if (positions.length < 3 || spacings.length < 2) {
+    sectionTitle(ctx, "Penampang geolistrik 2D");
+    paragraph(ctx, "Grafik 2D belum dapat dibuat. Data perlu memiliki posisi lintasan pada minimal 3 titik dan menggunakan minimal 2 jarak elektroda berbeda.");
+    return;
+  }
+
+  const chartHeight = 206;
+  ensureSpace(ctx, chartHeight + 82);
+  sectionTitle(ctx, "Penampang geolistrik 2D");
+  const xGap = Math.min(...positions.slice(1).map((value, index) => value - positions[index]));
+  const spacingGap = Math.min(...spacings.slice(1).map((value, index) => value - spacings[index]));
+  const dx = Number.isFinite(xGap) && xGap > 0 ? xGap : 1;
+  const minSpacingGap = Number.isFinite(spacingGap) && spacingGap > 0 ? spacingGap : spacings[0];
+  const minX = positions[0] - dx / 2;
+  const maxX = positions[positions.length - 1] + dx / 2;
+  const maxDepth = Math.max(...spacings) * 0.56;
+  const plotX = MARGIN + 43;
+  const plotWidth = PAGE_WIDTH - MARGIN - 12 - plotX;
+  const plotTop = ctx.y - 16;
+  const plotHeight = chartHeight - 55;
+  const plotBottom = plotTop - plotHeight;
+  const xPosition = (value: number) => plotX + (value - minX) / (maxX - minX) * plotWidth;
+  const yPosition = (depth: number) => plotTop - depth / maxDepth * plotHeight;
+  const columns = 48;
+  const gridRows = 18;
+  const cellWidth = plotWidth / columns;
+  const cellHeight = plotHeight / gridRows;
+
+  ctx.page.drawRectangle({
+    x: plotX,
+    y: plotBottom,
+    width: plotWidth,
+    height: plotHeight,
+    color: PALE,
+    borderColor: LINE,
+    borderWidth: 0.6,
+  });
+  for (let column = 0; column < columns; column++) {
+    const x = minX + ((column + 0.5) / columns) * (maxX - minX);
+    for (let row = 0; row < gridRows; row++) {
+      const depth = ((row + 0.5) / gridRows) * maxDepth;
+      const nx = x / dx;
+      const ny = depth / (0.5 * minSpacingGap);
+      const nearby = points.map((point) => ({
+        distance: Math.hypot(nx - point.x / dx, ny - point.spacing / minSpacingGap),
+        rho: point.rho,
+      })).sort((a, b) => a.distance - b.distance).slice(0, 4);
+      if (!nearby.length || nearby[0].distance > 1.9) continue;
+      const totalWeight = nearby.reduce((sum, point) => sum + 1 / (point.distance ** 2 + 0.06), 0);
+      const logRho = nearby.reduce((sum, point) =>
+        sum + Math.log10(point.rho) / (point.distance ** 2 + 0.06), 0,
+      ) / totalWeight;
+      ctx.page.drawRectangle({
+        x: plotX + column * cellWidth,
+        y: plotTop - (row + 1) * cellHeight,
+        width: cellWidth + 0.3,
+        height: cellHeight + 0.3,
+        color: resistivityColor(10 ** logRho),
+      });
+    }
+  }
+  ctx.page.drawLine({ start: { x: plotX, y: plotTop }, end: { x: plotX + plotWidth, y: plotTop }, thickness: 1, color: NAVY });
+  for (let index = 0; index < 5; index++) {
+    const value = minX + (maxX - minX) * index / 4;
+    const x = xPosition(value);
+    ctx.page.drawLine({ start: { x, y: plotBottom }, end: { x, y: plotTop }, thickness: 0.35, color: LINE });
+    drawText(ctx, formatNumber(value, 1), x - 10, plotTop + 7, 7, MUTED);
+  }
+  for (let index = 0; index < 4; index++) {
+    const depth = maxDepth * index / 3;
+    const y = yPosition(depth);
+    ctx.page.drawLine({ start: { x: plotX, y }, end: { x: plotX + plotWidth, y }, thickness: 0.35, color: LINE });
+    drawText(ctx, formatNumber(depth, 1), MARGIN + 5, y - 2, 7, MUTED);
+  }
+  for (const point of points) {
+    ctx.page.drawCircle({
+      x: xPosition(point.x),
+      y: yPosition(point.spacing * 0.5),
+      size: 2.4,
+      color: rgb(1, 1, 1),
+      borderColor: INK,
+      borderWidth: 0.8,
+    });
+  }
+  drawText(ctx, "Posisi lintasan (m)", plotX + plotWidth / 2 - 42, plotBottom - 13, 7, MUTED);
+  drawText(ctx, "Kedalaman semu (m)", MARGIN + 2, plotTop + 16, 7, MUTED);
+  const legend = [
+    { label: "<10 lempung/asin", color: resistivityColor(5) },
+    { label: "10-25 payau/lempung basah", color: resistivityColor(15) },
+    { label: "25-150 potensi akuifer", color: resistivityColor(70) },
+    { label: ">150 padat/batuan", color: resistivityColor(300) },
+  ];
+  let legendX = plotX;
+  for (const item of legend) {
+    ctx.page.drawRectangle({ x: legendX, y: plotBottom - 27, width: 7, height: 7, color: item.color });
+    drawText(ctx, item.label, legendX + 10, plotBottom - 25, 6, MUTED);
+    legendX += 122;
+  }
+  ctx.y = plotBottom - 42;
+  paragraph(ctx, "Warna memperlihatkan perubahan nilai resistivitas dari titik ukur. Grafik ini merupakan interpolasi indikatif, bukan hasil inversi geofisika. Kedalaman semu diperkirakan dari jarak elektroda.");
+}
+
+function plainConclusion(verdict: string, depth: number | null, warnings: string[]): string[] {
+  const lines = verdict === "Data kurang"
+    ? ["Data belum cukup untuk menilai lapisan bawah tanah. Perlu pengukuran pada sedikitnya tiga jarak elektroda berbeda."]
+    : verdict === "Rendah"
+      ? ["Data saat ini belum menunjukkan lapisan yang jelas berpotensi menjadi akuifer air tawar."]
+      : verdict.toLowerCase().includes("risiko") || verdict.toLowerCase().includes("payau")
+        ? ["Ada lapisan yang mungkin berupa lempung basah atau air payau. Data ini belum memastikan adanya sumber air tawar."]
+        : [`Data menunjukkan lapisan yang berpotensi menyimpan air pada kedalaman perkiraan ${formatNumber(depth)} m. Ini indikasi awal, bukan kepastian ada air.`];
+
+  const plainWarnings = warnings.flatMap((warning) => {
+    if (/pengulangan ukur|sebaran/i.test(warning)) return ["Hasil pengukuran berulang berbeda cukup jauh; periksa sambungan elektroda dan ulangi pengukuran."];
+    if (/lonjakan/i.test(warning)) return ["Ada perubahan hasil yang tajam antarjarak; sebaiknya periksa ulang pengukuran terkait."];
+    if (/lapisan terdalam|asin|payau|lempung/i.test(warning)) return ["Ada kemungkinan lapisan lempung atau air payau/asin; jangan jadikan hasil ini satu-satunya dasar pengeboran."];
+    return [];
+  });
+  lines.push(...new Set(plainWarnings));
+  lines.push("Pastikan dengan membandingkan sumur sekitar dan meminta pemeriksaan ahli sebelum menentukan pengeboran. Kualitas air perlu diuji di laboratorium.");
+  return lines;
+}
+
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
@@ -195,7 +346,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const measurements = [...(measurementsResult.data ?? [])].reverse();
   const samples = [...(waterResult.data ?? [])].reverse();
   const analyses = analysisResult.data ?? [];
-  const ruleAnalysis = analyses.find((analysis) => analysis.mode === "rule");
+  const ruleAnalysis = analyses.find((analysis) => analysis.mode === "rule") ?? null;
   const aiText = analyses.find((analysis) => Boolean(analysis.ai_text))?.ai_text?.trim() || null;
 
   const document = await PDFDocument.create();
@@ -242,6 +393,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     if (measurements.length === 1000) paragraph(ctx, "Catatan: laporan memuat maksimum 1.000 pengukuran terbaru.", { size: 8, color: MUTED });
   }
 
+  drawSection2D(ctx, measurements);
+
   if (samples.length) {
     sectionTitle(ctx, "Data sampel kualitas air");
     drawTable(ctx,
@@ -259,17 +412,16 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (ruleAnalysis) {
     const result = isRecord(ruleAnalysis.result) ? ruleAnalysis.result : {};
     drawTable(ctx, ["Indikator", "Hasil"], [
-      ["Verdik indikatif", ruleAnalysis.verdict],
-      ["Skor", `${ruleAnalysis.score}/100`],
+      ["Kesimpulan otomatis", ruleAnalysis.verdict],
+      ["Skor kecocokan data (bukan peluang menemukan air)", `${ruleAnalysis.score}/100`],
       ["Target kedalaman indikatif", ruleAnalysis.best_depth === null ? "Belum tersedia" : `${formatNumber(ruleAnalysis.best_depth)} m`],
       ["Resistivitas target", ruleAnalysis.best_rho === null ? "Belum tersedia" : `${formatNumber(ruleAnalysis.best_rho)} ohm.m`],
-      ["Model analisis", ruleAnalysis.mode === "ai" ? "Gemini" : "Aturan"],
     ], [190, 321]);
 
     const warnings = Array.isArray(result.warnings) ? result.warnings.filter((item): item is string => typeof item === "string") : [];
     if (warnings.length) {
-      paragraph(ctx, "Peringatan:", { size: 9, color: NAVY });
-      warnings.forEach((warning) => paragraph(ctx, `- ${warning}`, { indent: 8 }));
+      paragraph(ctx, "Catatan pemeriksaan data:", { size: 9, color: NAVY });
+      warnings.slice(0, 4).forEach((warning) => paragraph(ctx, `- ${warning}`, { indent: 8 }));
     }
     const layers = Array.isArray(result.layers) ? result.layers.filter(isRecord) : [];
     if (layers.length) {
@@ -284,14 +436,19 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         [190, 107, 107, 107],
       );
     }
+    sectionTitle(ctx, "Kesimpulan singkat");
+    plainConclusion(ruleAnalysis.verdict, ruleAnalysis.best_depth, warnings)
+      .forEach((line) => paragraph(ctx, line));
   } else {
-    paragraph(ctx, "Belum ada hasil analisis tersimpan untuk titik survei ini.");
+    sectionTitle(ctx, "Kesimpulan singkat");
+    paragraph(ctx, "Analisis belum dijalankan untuk titik survei ini. Jalankan analisis dari aplikasi agar laporan dapat memuat kesimpulan.");
   }
 
   if (aiText) {
     sectionTitle(ctx, "Interpretasi Gemini");
-    aiText.split(/\r?\n/).map((line: string) => line.replace(/[#*_`>-]/g, "").trim()).filter(Boolean)
-      .forEach((line: string) => paragraph(ctx, line));
+    formatInterpretationText(aiText).forEach((line) => paragraph(ctx, line));
+  } else {
+    paragraph(ctx, "Belum ada interpretasi Gemini tersimpan untuk survei ini.");
   }
 
   const disclaimer = "Catatan: hasil analisis geolistrik dan penilaian kualitas air dalam laporan ini bersifat indikatif. Interpretasi resistivitas bukan kepastian keberadaan air; penampang merupakan visualisasi/interpolasi, bukan inversi geofisika. Verifikasi dengan kondisi lapangan, tenaga ahli, dan uji laboratorium sebelum mengambil keputusan.";

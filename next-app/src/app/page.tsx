@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function HomePage() {
@@ -12,6 +13,7 @@ export default async function HomePage() {
     const { data } = await supabase.auth.getUser();
     signedIn = Boolean(data.user);
   }
+  if (signedIn) redirect("/dashboard");
 
   return (
     <main className="welcome">
