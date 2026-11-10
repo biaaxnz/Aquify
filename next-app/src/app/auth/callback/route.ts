@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-function safeNextPath(value: string | null): string {
-  return value === "/reset-password" ? value : "/reset-password";
-}
-
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const code = request.nextUrl.searchParams.get("code");
@@ -41,6 +37,5 @@ export async function GET(request: NextRequest) {
     ));
   }
 
-  const nextPath = safeNextPath(searchParams.get("next"));
-  return NextResponse.redirect(new URL(nextPath, request.url));
+  return NextResponse.redirect(new URL("/reset-password", request.url));
 }
