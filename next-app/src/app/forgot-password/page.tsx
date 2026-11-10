@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { requestPasswordReset } from "@/app/auth-actions";
 import { AuthBrand } from "@/components/auth-brand";
+import { ResetRequestForm } from "./reset-request-form";
 
 export default async function ForgotPasswordPage({
   searchParams,
@@ -23,13 +23,7 @@ export default async function ForgotPasswordPage({
         <p className="auth-sub">Masukkan email akun Aquify. Kami akan mengirim tautan untuk membuat kata sandi baru.</p>
         {params.error && <p className="notice" role="alert">{params.error}</p>}
         {params.message && <p className="notice info" role="status">{params.message}</p>}
-        <form className="auth-form" action={requestPasswordReset}>
-          <div className="field">
-            <label htmlFor="email">Email akun</label>
-            <input id="email" type="email" name="email" autoComplete="email" required />
-          </div>
-          <button className="btn" type="submit">Kirim tautan pemulihan</button>
-        </form>
+        <ResetRequestForm />
         <p className="auth-foot"><Link href="/login">Kembali ke halaman masuk</Link></p>
       </main>
     </div>

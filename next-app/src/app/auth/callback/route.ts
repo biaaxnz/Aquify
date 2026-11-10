@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     console.error("Aquify password recovery callback failed", error.message);
     const normalizedError = error.message.toLowerCase();
     const message = normalizedError.includes("verifier") || normalizedError.includes("pkce")
-      ? "Tautan dibuka di browser berbeda dari tempat permintaan dibuat. Minta tautan baru, lalu buka di browser yang sama dan gunakan satu kali."
+      ? "Sesi keamanan untuk tautan ini tidak ditemukan. Minta tautan baru dari domain Aquify yang sama, lalu buka tautan itu satu kali."
       : "Tautan pemulihan sudah kedaluwarsa atau sudah digunakan. Minta tautan baru dan buka sekali saja.";
     return NextResponse.redirect(new URL(
       `/forgot-password?error=${encodeURIComponent(message)}`,

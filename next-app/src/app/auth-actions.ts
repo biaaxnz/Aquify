@@ -81,34 +81,6 @@ export async function signUp(formData: FormData) {
   redirect("/login?message=Periksa%20email%20untuk%20konfirmasi%20pendaftaran");
 }
 
-export async function requestPasswordReset(formData: FormData) {
-  const email = formText(formData, "email").toLowerCase();
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    redirect("/forgot-password?error=Masukkan%20alamat%20email%20yang%20valid");
-  }
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (!appUrl) {
-    console.error("Aquify password recovery requires NEXT_PUBLIC_APP_URL.");
-    redirect("/forgot-password?error=Fitur%20pemulihan%20belum%20dikonfigurasi.%20Hubungi%20administrator.");
-  }
-
-  let failure: string | null = null;
-  try {
-    const supabase = await createClient();
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${appUrl.replace(/\/+$/, "")}/auth/callback?next=/reset-password`,
-    });
-    if (error) failure = authErrorMessage(error.message);
-  } catch (error) {
-    console.error("Aquify password recovery request failed", error);
-    failure = "Tidak dapat menghubungi layanan pemulihan akun. Periksa koneksi internet lalu coba lagi.";
-  }
-
-  if (failure) redirect(`/forgot-password?error=${encodeURIComponent(failure)}`);
-  redirect("/forgot-password?message=Tautan%20pemulihan%20sudah%20dikirim%20ke%20email.%20Silakan%20periksa%20kotak%20masuk%20dan%20folder%20spam.");
-}
-
 export async function updatePassword(formData: FormData) {
   const password = formPassword(formData, "password");
   const confirmation = formPassword(formData, "password_confirmation");

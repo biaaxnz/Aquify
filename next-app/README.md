@@ -27,7 +27,7 @@ Penampang 2D adalah pseudosection interpolasi data ukur, bukan inversi resistivi
 
 Halaman login menyediakan tautan **Lupa kata sandi?**. Untuk mengaktifkannya:
 
-1. Pastikan `NEXT_PUBLIC_APP_URL` menunjuk ke origin aplikasi yang benar: `http://localhost:3000` untuk pengembangan dan domain produksi Aquify untuk deployment.
+1. Permintaan reset dibuat langsung di browser dan memakai origin halaman yang sedang dibuka agar cookie PKCE cocok dengan domain callback. Buka halaman dan tautan email pada domain Aquify yang sama.
 2. Di Supabase Dashboard, buka **Authentication → URL Configuration** dan masukkan URL callback aplikasi pada daftar **Redirect URLs**, misalnya `http://localhost:3000/auth/callback` serta `https://domain-produksi-kamu/auth/callback`.
 3. Pastikan SMTP/email provider Supabase dapat mengirim email pemulihan. Agar tautan bekerja lintas browser/perangkat tanpa bergantung pada cookie PKCE browser yang meminta reset, buka **Authentication → Emails → Reset Password** dan arahkan tombol email langsung ke callback Aquify menggunakan token hash:
 
@@ -36,7 +36,7 @@ Halaman login menyediakan tautan **Lupa kata sandi?**. Untuk mengaktifkannya:
    ```
 
    Pastikan **Site URL** adalah domain Aquify yang dideploy dan callback tersebut ada di **Redirect URLs**. Callback menerima token hash recovery dan juga tetap mendukung tautan PKCE yang menghasilkan `code`.
-4. Pengguna meminta tautan melalui email, membuka tautan tersebut pada domain aplikasi, lalu membuat kata sandi baru minimal 8 karakter.
+4. Pengguna meminta tautan melalui email, membuka tautan tersebut pada domain aplikasi yang sama, lalu membuat kata sandi baru minimal 8 karakter.
 
 Untuk menjadikan akun pertama sebagai admin, daftar dan konfirmasi akun terlebih dahulu. Lalu, sebagai pemilik proyek, jalankan di Supabase SQL Editor:
 
