@@ -23,6 +23,15 @@ Penampang 2D adalah pseudosection interpolasi data ukur, bukan inversi resistivi
 
 6. Buka `http://localhost:3000`. Untuk akun baru, ikuti pengaturan konfirmasi email di Supabase Auth.
 
+### Pemulihan kata sandi
+
+Halaman login menyediakan tautan **Lupa kata sandi?**. Untuk mengaktifkannya:
+
+1. Pastikan `NEXT_PUBLIC_APP_URL` menunjuk ke origin aplikasi yang benar: `http://localhost:3000` untuk pengembangan dan domain produksi Aquify untuk deployment.
+2. Di Supabase Dashboard, buka **Authentication → URL Configuration** dan masukkan URL callback aplikasi pada daftar **Redirect URLs**, misalnya `http://localhost:3000/auth/callback` serta `https://domain-produksi-kamu/auth/callback`.
+3. Pastikan SMTP/email provider Supabase dapat mengirim email pemulihan. Template pemulihan bawaan sebaiknya tetap menggunakan tautan konfirmasi Supabase `{{ .ConfirmationURL }}`.
+4. Pengguna meminta tautan melalui email, membuka tautan tersebut pada domain aplikasi, lalu membuat kata sandi baru minimal 8 karakter.
+
 Untuk menjadikan akun pertama sebagai admin, daftar dan konfirmasi akun terlebih dahulu. Lalu, sebagai pemilik proyek, jalankan di Supabase SQL Editor:
 
 ```sql
@@ -37,7 +46,7 @@ Admin memiliki menu **Simulasi Integrasi** di `/admin/simulation` untuk melihat 
 
 ## Deploy ke Vercel
 
-Impor repo GitHub ke Vercel dan set **Root Directory** menjadi `next-app`. Tambahkan `NEXT_PUBLIC_SUPABASE_URL` dan `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` di Environment Variables, lalu deploy. URL callback/redirect Auth harus mencakup domain lokal dan domain Vercel.
+Impor repo GitHub ke Vercel dan set **Root Directory** menjadi `next-app`. Tambahkan `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, dan `NEXT_PUBLIC_APP_URL` (isi dengan URL produksi Aquify, tanpa garis miring di akhir) di Environment Variables, lalu deploy. URL callback/redirect Auth harus mencakup domain lokal dan domain Vercel.
 
 Endpoint pemeriksaan awal: `/api/mobile/ping`.
 

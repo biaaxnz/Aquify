@@ -25,12 +25,13 @@ export default async function LoginPage({
         </Link>
         <p className="eyebrow">Selamat datang kembali</p>
         <h1 className="auth-title">Masuk ke Aquify</h1>
-        <p className="auth-sub">Gunakan akun Aquify untuk membuka ruang kerja surveimu.</p>
+        <p className="auth-sub">Masuk untuk melihat dan mengelola data surveimu di Aquify.</p>
         {params.error && <p className="notice" role="alert">{params.error}</p>}
         {params.message && <p className="notice info">{params.message}</p>}
         <form className="auth-form" action={signIn}>
           <div className="field"><label htmlFor="email">Email</label><input id="email" type="email" name="email" autoComplete="email" required /></div>
           <div className="field"><label htmlFor="password">Kata sandi</label><input id="password" type="password" name="password" autoComplete="current-password" required /></div>
+          <p className="link-r"><Link href="/forgot-password">Lupa kata sandi?</Link></p>
           <button className="btn" type="submit">Masuk</button>
         </form>
         <p className="auth-foot">Belum punya akun? <Link href="/register">Daftar sekarang</Link></p>
