@@ -98,3 +98,30 @@ export function formatInterpretationText(raw: string): string[] {
       .trim())
     .filter((line) => line && line !== "{" && line !== "}" && line !== "[" && line !== "]");
 }
+
+export type InterpretationSection = {
+  heading: string;
+  body: string;
+};
+
+function sectionHeading(line: string): { heading: string; inlineBody: string } | null {
+  const match = line.match(/(?:^| - )(temuan utama|temuan|ringkasan|kesimpulan|risiko|ketidakpastian|rekomendasi|langkah(?: verifikasi)? berikutnya|kualitas data|interpretasi|data terukur|sampel air|kualitas air|tingkat keyakinan(?: ai)?|perbedaan dari analisis aturan)\b\s*:?\s*(.*)$/i);
+  if (!match) return null;
+  const heading = readableLabel(match[1]);
+  return { heading, inlineBody: match[2].replace(/^[:\s-]+/, "").trim() };
+}
+
+export function splitInterpretationSections(raw: string): InterpretationSection[] {
+  const sections: InterpretationSection[] = [];
+  for (const line of formatInterpretationText(raw)) {
+    const detected = sectionHeading(line);
+    if (detected) {
+      sections.push({ heading: detected.heading, body: detected.inlineBody });
+    } else if (sections.length) {
+      sections[sections.length - 1].body = [sections[sections.length - 1].body, line].filter(Boolean).join(" ");
+    } else {
+      sections.push({ heading: "Ringkasan", body: line });
+    }
+  }
+  return sections.filter((section) => section.body);
+}

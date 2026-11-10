@@ -108,7 +108,7 @@ export async function runRuleAnalysis(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   const [{ data: point, error: pointError }, measurements, water] = await Promise.all([
-    supabase.from("points").select("id").eq("id", pointId).eq("owner_id", user.id).maybeSingle(),
+    supabase.from("points").select("id,code").eq("id", pointId).eq("owner_id", user.id).maybeSingle(),
     supabase.from("measurements").select("spacing_m,rho_a").eq("point_id", pointId).order("spacing_m"),
     supabase.from("water_samples").select("tds_ppm,ec_us,ph").eq("point_id", pointId).order("measured_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
@@ -130,7 +130,7 @@ export async function runRuleAnalysis(formData: FormData) {
     result: { ...result, sounding, water: waterAssessment },
   });
   if (error) redirect(`/analysis?error=${encodeURIComponent(error.message)}`);
-  redirect(`/analysis?message=Analisis%20aturan%20tersimpan%20untuk%20${encodeURIComponent(pointId)}`);
+  redirect(`/analysis?message=${encodeURIComponent(`Analisis aturan untuk ${point.code} sudah diperbarui.`)}`);
 }
 
 export async function askGemini(formData: FormData) {

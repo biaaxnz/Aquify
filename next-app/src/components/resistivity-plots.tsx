@@ -82,10 +82,67 @@ export function Section2DPlot({ rows }: { rows: Array<{ x_m: number | null; spac
   const uniqueX = [...new Set(points.map((point) => point.x_m))].sort((a, b) => a - b);
   const uniqueSpacing = [...new Set(points.map((point) => point.spacing_m))].sort((a, b) => a - b);
   if (uniqueX.length < 3 || uniqueSpacing.length < 2) {
-    return <div className="section-empty">
-      <p className="hint">Penampang 2D muncul setelah ada pengukuran di minimal 3 posisi lintasan (x) dan 2 jarak elektroda yang berbeda.</p>
-      <p className="hint">Isi “Posisi sepanjang lintasan (m)” setiap kali mengukur—misalnya 0 m, 5 m, dan 10 m. Data tanpa posisi tidak bisa membentuk penampang 2D.</p>
-    </div>;
+    const width = 780;
+    const height = 430;
+    const left = 60;
+    const right = 18;
+    const top = 56;
+    const bottom = 92;
+    const minX = uniqueX.length ? uniqueX[0] - 5 : 0;
+    const maxX = uniqueX.length > 1 ? uniqueX[uniqueX.length - 1] + 5 : minX + 10;
+    const maxDepth = Math.max(5, ...validRows.map((row) => row.spacing_m * 0.5));
+    const plotWidth = width - left - right;
+    const plotHeight = height - top - bottom;
+    const xPosition = (value: number) => left + (value - minX) / (maxX - minX) * plotWidth;
+    const depthPosition = (depth: number) => top + depth / maxDepth * plotHeight;
+    const missing: string[] = [];
+    if (uniqueX.length < 3) missing.push("posisi lintasan berbeda minimal 3");
+    if (uniqueSpacing.length < 2) missing.push("jarak elektroda berbeda minimal 2");
+    if (rows.some((row) => row.x_m === null || !Number.isFinite(row.x_m))) missing.push("posisi x untuk setiap pengukuran");
+    const gradientId = `resistivity-placeholder-${validRows.length}-${uniqueX.length}-${uniqueSpacing.length}`;
+
+    return (
+      <div className="section-layout">
+        <div className="plot-scroll">
+          <svg className="res-plot section-plot" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Kerangka penampang resistivitas 2D; data belum cukup untuk interpolasi">
+            <defs>
+              <pattern id={gradientId} width="12" height="12" patternUnits="userSpaceOnUse">
+                <path d="M 0 12 L 12 0" stroke="#d8e2e8" strokeWidth="1" />
+              </pattern>
+            </defs>
+            <text className="plot-axis section-plot-title" x={left} y="24">Penampang pseudo-2D · menunggu data yang cukup</text>
+            <rect x={left} y={top} width={plotWidth} height={plotHeight} fill="#f5f8fa" />
+            <rect x={left} y={top} width={plotWidth} height={plotHeight} fill={`url(#${gradientId})`} />
+            {Array.from({ length: 7 }, (_, index) => {
+              const value = minX + index * (maxX - minX) / 6;
+              const position = xPosition(value);
+              return <g key={`x-${index}`}><line className="plot-grid" x1={position} y1={top} x2={position} y2={top + plotHeight} /><text className="plot-label" x={position} y={top - 10} textAnchor="middle">{value.toFixed(1).replace(/\.0$/, "")}</text></g>;
+            })}
+            {Array.from({ length: 5 }, (_, index) => {
+              const depth = index / 4 * maxDepth;
+              const position = depthPosition(depth);
+              return <g key={`y-${index}`}><line className="plot-grid" x1={left} y1={position} x2={width - right} y2={position} /><text className="plot-label" x={left - 8} y={position + 4} textAnchor="end">{depth.toFixed(1)}</text></g>;
+            })}
+            {points.map((point, index) => {
+              const cx = xPosition(point.x_m);
+              const cy = depthPosition(point.spacing_m * 0.5);
+              return <circle key={index} cx={cx} cy={cy} r="5" fill={resistivityColor(point.rho_a)} stroke="#123b55" strokeWidth="1"><title>x {point.x_m} m, jarak elektroda {point.spacing_m} m, resistivitas {point.rho_a.toFixed(1)} ohm.m</title></circle>;
+            })}
+            <text className="plot-axis" x={(left + width - right) / 2} y={top + plotHeight + 24} textAnchor="middle">Posisi sepanjang lintasan (m)</text>
+            <text className="plot-axis" transform={`translate(16 ${top + plotHeight / 2}) rotate(-90)`} textAnchor="middle">Kedalaman semu (m)</text>
+            <text className="plot-axis" x={(left + width - right) / 2} y={top + plotHeight + 52} textAnchor="middle">
+              {validRows.length ? `Titik ukur ditampilkan (${validRows.length}); interpolasi belum tersedia` : "Belum ada titik ukur yang dapat ditampilkan"}
+            </text>
+          </svg>
+        </div>
+        <aside className="section-legend">
+          <b>Penampang belum lengkap</b>
+          <p>Kerangka grafik tetap ditampilkan. {points.length ? "Titik ukur yang memiliki posisi x ditampilkan tanpa interpolasi." : "Belum ada titik ukur berposisi yang dapat dipetakan."}</p>
+          <p>Untuk menampilkan interpolasi 2D, lengkapi: {missing.join(", ")}.</p>
+          <p>Grafik interpolasi adalah visualisasi indikatif, bukan inversi geofisika.</p>
+        </aside>
+      </div>
+    );
   }
 
   const width = 780;

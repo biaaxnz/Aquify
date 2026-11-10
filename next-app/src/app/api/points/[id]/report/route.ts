@@ -1,6 +1,6 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import { createClient } from "@/lib/supabase/server";
-import { formatInterpretationText } from "@/lib/interpretation-text";
+import { splitInterpretationSections } from "@/lib/interpretation-text";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -149,6 +149,34 @@ function paragraph(ctx: PdfContext, text: string, options: { size?: number; colo
   ctx.y -= 3;
 }
 
+function callout(ctx: PdfContext, title: string, text: string) {
+  const titleSize = 8.5;
+  const bodySize = 8.5;
+  const bodyLines = wrapText(text, ctx.regular, bodySize, PAGE_WIDTH - 2 * MARGIN - 28);
+  const lines = bodyLines.slice(0, 3);
+  if (bodyLines.length > lines.length && lines.length) {
+    let lastLine = `${lines[lines.length - 1]}...`;
+    while (lastLine.length > 4 && ctx.regular.widthOfTextAtSize(lastLine, bodySize) > PAGE_WIDTH - 2 * MARGIN - 28) {
+      lastLine = `${lastLine.slice(0, -4)}...`;
+    }
+    lines[lines.length - 1] = lastLine;
+  }
+  const height = 17 + lines.length * 12 + 10;
+  ensureSpace(ctx, height + 6);
+  ctx.page.drawRectangle({
+    x: MARGIN,
+    y: ctx.y - height,
+    width: PAGE_WIDTH - 2 * MARGIN,
+    height,
+    color: PALE,
+    borderColor: LINE,
+    borderWidth: 0.6,
+  });
+  drawText(ctx, title, MARGIN + 12, ctx.y - 14, titleSize, NAVY, ctx.bold);
+  lines.forEach((line, index) => drawText(ctx, line, MARGIN + 12, ctx.y - 29 - index * 12, bodySize, INK));
+  ctx.y -= height + 8;
+}
+
 function formatNumber(value: number | null, digits = 2): string {
   return value === null || !Number.isFinite(value)
     ? "—"
@@ -289,24 +317,56 @@ function drawSection2D(
   paragraph(ctx, "Warna memperlihatkan perubahan nilai resistivitas dari titik ukur. Grafik ini merupakan interpolasi indikatif, bukan hasil inversi geofisika. Kedalaman semu diperkirakan dari jarak elektroda.");
 }
 
-function plainConclusion(verdict: string, depth: number | null, warnings: string[]): string[] {
-  const lines = verdict === "Data kurang"
-    ? ["Data belum cukup untuk menilai lapisan bawah tanah. Perlu pengukuran pada sedikitnya tiga jarak elektroda berbeda."]
-    : verdict === "Rendah"
-      ? ["Data saat ini belum menunjukkan lapisan yang jelas berpotensi menjadi akuifer air tawar."]
-      : verdict.toLowerCase().includes("risiko") || verdict.toLowerCase().includes("payau")
-        ? ["Ada lapisan yang mungkin berupa lempung basah atau air payau. Data ini belum memastikan adanya sumber air tawar."]
-        : [`Data menunjukkan lapisan yang berpotensi menyimpan air pada kedalaman perkiraan ${formatNumber(depth)} m. Ini indikasi awal, bukan kepastian ada air.`];
+function plainConclusion(
+  verdict: string,
+  score: number,
+  depth: number | null,
+  rho: number | null,
+  soundingCount: number,
+  warnings: string[],
+): Array<{ heading: string; body: string }> {
+  const result: Array<{ heading: string; body: string }> = [];
+  const riskWarnings: string[] = [];
+  const dataWarnings: string[] = [];
 
-  const plainWarnings = warnings.flatMap((warning) => {
-    if (/pengulangan ukur|sebaran/i.test(warning)) return ["Hasil pengukuran berulang berbeda cukup jauh; periksa sambungan elektroda dan ulangi pengukuran."];
-    if (/lonjakan/i.test(warning)) return ["Ada perubahan hasil yang tajam antarjarak; sebaiknya periksa ulang pengukuran terkait."];
-    if (/lapisan terdalam|asin|payau|lempung/i.test(warning)) return ["Ada kemungkinan lapisan lempung atau air payau/asin; jangan jadikan hasil ini satu-satunya dasar pengeboran."];
-    return [];
+  if (verdict === "Data kurang") {
+    result.push({
+      heading: "Kecukupan data",
+      body: `Tercatat ${soundingCount} jarak elektroda berbeda, tetapi jumlah data yang lolos untuk analisis sounding belum memenuhi minimal tiga jarak. Karena itu, pola lapisan dan perkiraan kedalaman target belum dapat disimpulkan.`,
+    });
+  } else if (verdict === "Rendah") {
+    result.push({
+      heading: "Temuan",
+      body: "Data yang dianalisis belum menunjukkan lapisan dengan ciri resistivitas yang cukup untuk ditandai sebagai akuifer potensial. Hasil ini tidak membuktikan bahwa air tanah sama sekali tidak ada; jangkauan dan jumlah data pengukuran dapat membatasi pembacaan.",
+    });
+  } else if (/risiko|payau|lempung/i.test(verdict)) {
+    result.push({
+      heading: "Temuan dan risiko",
+      body: `Lapisan target berada pada perkiraan kedalaman ${formatNumber(depth)} m dengan resistivitas ${formatNumber(rho)} ohm.m. Pola ini dapat berkaitan dengan lempung basah atau air payau/asin, sehingga belum cukup untuk menyatakan adanya sumber air tawar.`,
+    });
+  } else {
+    result.push({
+      heading: "Temuan",
+      body: `Pola pengukuran menunjukkan lapisan yang berpotensi menjadi akuifer pada perkiraan kedalaman ${formatNumber(depth)} m, dengan resistivitas ${formatNumber(rho)} ohm.m. Kesimpulan sistem adalah "${verdict}" dengan skor indikatif ${score}/100. Skor ini bukan persentase peluang menemukan air dan bukan jaminan hasil pengeboran.`,
+    });
+  }
+
+  for (const warning of warnings) {
+    if (/pengulangan ukur|sebaran/i.test(warning)) {
+      dataWarnings.push("Hasil pengukuran berulang berbeda cukup jauh. Periksa kontak elektroda dan ulangi pengukuran pada jarak tersebut.");
+    } else if (/lonjakan/i.test(warning)) {
+      dataWarnings.push("Ada perubahan hasil yang tajam antara jarak elektroda. Periksa kembali data ukur yang terkait.");
+    } else if (/lapisan terdalam|asin|payau|lempung/i.test(warning)) {
+      riskWarnings.push("Ada kemungkinan lapisan lempung atau air payau/asin. Jangan gunakan hasil geolistrik ini sebagai satu-satunya dasar pengeboran.");
+    }
+  }
+  if (dataWarnings.length) result.push({ heading: "Kualitas data", body: [...new Set(dataWarnings)].join(" ") });
+  if (riskWarnings.length) result.push({ heading: "Risiko", body: [...new Set(riskWarnings)].join(" ") });
+  result.push({
+    heading: "Langkah berikutnya",
+    body: "Bandingkan dengan kondisi sumur di sekitar lokasi, lalu minta peninjauan tenaga ahli sebelum menentukan titik dan kedalaman pengeboran. Jika sampel air tersedia, pastikan kelayakannya melalui uji laboratorium.",
   });
-  lines.push(...new Set(plainWarnings));
-  lines.push("Pastikan dengan membandingkan sumur sekitar dan meminta pemeriksaan ahli sebelum menentukan pengeboran. Kualitas air perlu diuji di laboratorium.");
-  return lines;
+  return result;
 }
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -436,19 +496,46 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         [190, 107, 107, 107],
       );
     }
-    sectionTitle(ctx, "Kesimpulan singkat");
-    plainConclusion(ruleAnalysis.verdict, ruleAnalysis.best_depth, warnings)
-      .forEach((line) => paragraph(ctx, line));
+    sectionTitle(ctx, "Kesimpulan dan saran");
+    const distinctSpacings = new Set(measurements.map((row) => row.spacing_m.toFixed(2))).size;
+    plainConclusion(
+      ruleAnalysis.verdict,
+      ruleAnalysis.score,
+      ruleAnalysis.best_depth,
+      ruleAnalysis.best_rho,
+      distinctSpacings,
+      warnings,
+    ).forEach(({ heading, body }) => callout(ctx, heading, body));
   } else {
-    sectionTitle(ctx, "Kesimpulan singkat");
-    paragraph(ctx, "Analisis belum dijalankan untuk titik survei ini. Jalankan analisis dari aplikasi agar laporan dapat memuat kesimpulan.");
+    sectionTitle(ctx, "Kesimpulan dan saran");
+    callout(
+      ctx,
+      "Analisis belum tersedia",
+      "Analisis aturan belum dijalankan untuk titik survei ini. Jalankan analisis dari aplikasi untuk mendapat ringkasan hasil dan catatan yang sesuai dengan data pengukuran.",
+    );
   }
 
   if (aiText) {
     sectionTitle(ctx, "Interpretasi Gemini");
-    formatInterpretationText(aiText).forEach((line) => paragraph(ctx, line));
+    const sections = splitInterpretationSections(aiText);
+    const importantSections = sections.filter((section) =>
+      /temuan|ringkasan|kesimpulan|risiko|ketidakpastian|rekomendasi|langkah|kualitas data|sampel air|kualitas air/i.test(section.heading),
+    );
+    if (importantSections.length) {
+      paragraph(ctx, "Poin utama dari analisis AI:", { size: 9, color: NAVY });
+      importantSections.slice(0, 4).forEach(({ heading, body }) => callout(ctx, heading, body));
+    }
+    if (sections.length) {
+      sectionTitle(ctx, "Uraian analisis Gemini");
+      sections.forEach(({ heading, body }) => {
+        paragraph(ctx, heading, { size: 9, color: NAVY });
+        paragraph(ctx, body);
+      });
+    } else {
+      paragraph(ctx, "Hasil analisis Gemini tersimpan, tetapi teksnya tidak dapat ditampilkan dalam format yang dapat dibaca. Kesimpulan otomatis tetap tersedia pada bagian sebelumnya.");
+    }
   } else {
-    paragraph(ctx, "Belum ada interpretasi Gemini tersimpan untuk survei ini.");
+    paragraph(ctx, "Belum ada interpretasi Gemini tersimpan untuk survei ini. Bagian kesimpulan otomatis di atas tetap dibuat dari analisis aturan dan data pengukuran.");
   }
 
   const disclaimer = "Catatan: hasil analisis geolistrik dan penilaian kualitas air dalam laporan ini bersifat indikatif. Interpretasi resistivitas bukan kepastian keberadaan air; penampang merupakan visualisasi/interpolasi, bukan inversi geofisika. Verifikasi dengan kondisi lapangan, tenaga ahli, dan uji laboratorium sebelum mengambil keputusan.";

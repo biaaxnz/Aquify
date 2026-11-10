@@ -17,7 +17,7 @@ const pageInfo: Record<string, { title: string; subtitle: string; icon: string }
   water: { title: "Cek Kualitas Air", subtitle: "Catat data parameter kualitas air dari sampel lapangan.", icon: "droplet" },
   analysis: { title: "Analisa AI", subtitle: "Analisis aturan, kurva resistivitas, dan interpretasi Gemini untuk titik surveimu.", icon: "sparkles" },
   device: { title: "Status Perangkat", subtitle: "Riwayat data ESP32 yang tersimpan pada server.", icon: "cpu" },
-  notifications: { title: "Notifikasi", subtitle: "Pemberitahuan dan status ruang kerja.", icon: "bell" },
+  notifications: { title: "Notifikasi", subtitle: "Pemberitahuan tentang survei dan aktivitas akun.", icon: "bell" },
   sync: { title: "Sinkron Firebase", subtitle: "Status integrasi sumber data eksternal.", icon: "refresh" },
   settings: { title: "Pengaturan", subtitle: "Informasi akun dan status layanan.", icon: "settings" },
 };
@@ -152,10 +152,21 @@ export default async function ModulePage({
             ? savedAnalysis.result as Partial<RuleAnalysis>
             : null;
           const evaluated = savedResult && Array.isArray(savedResult.layers) ? savedResult : preview;
+          const needsMoreSpacing = sounding.length < 3;
           return <section className="card analysis-result" key={point.id}>
             <div><h2>{point.name}</h2><p className="data-caption">{point.code} · {pointMeasurements.length} pengukuran · {sounding.length} jarak berbeda</p></div>
             <form className="module-actions" action={runRuleAnalysis}><input type="hidden" name="point_id" value={point.id} /><button className="btn sm" type="submit">Jalankan analisis aturan</button></form>
-            <div className="statcards"><div><b>{evaluated.verdict ?? "Data kurang"}</b><small>Kesimpulan indikatif</small></div><div><b>{evaluated.score ?? 0}/100</b><small>Skor kualitas data/indikasi</small></div><div><b>{evaluated.best?.depth ? `${evaluated.best.depth.toFixed(1)} m` : "–"}</b><small>Kedalaman target indikatif</small></div><div><b>{evaluated.best?.rho ? `${evaluated.best.rho.toFixed(1)} Ω·m` : "–"}</b><small>ρa target</small></div></div>
+            {needsMoreSpacing && <div className="alert info" role="status">
+              <b>Ringkasan: data belum cukup untuk analisis sounding.</b>
+              <p>Saat ini ada {sounding.length} jarak elektroda yang berbeda; diperlukan minimal 3. Tambahkan pengukuran pada jarak berbeda—mengulang jarak yang sama tidak menambah jumlah jarak unik.</p>
+              <Link className="tx-link" href={`/geolistrik?point=${encodeURIComponent(point.id)}`}>Tambah pengukuran untuk {point.code}</Link>
+            </div>}
+            <div className="statcards">
+              <div><b>{evaluated.verdict ?? "Data kurang"}</b><small>Kesimpulan indikatif</small></div>
+              <div><b>{needsMoreSpacing ? "—" : `${evaluated.score ?? 0}/100`}</b><small>{needsMoreSpacing ? "Skor belum tersedia" : "Skor kualitas data/indikasi"}</small></div>
+              <div><b>{!needsMoreSpacing && evaluated.best?.depth ? `${evaluated.best.depth.toFixed(1)} m` : "–"}</b><small>Kedalaman target indikatif</small></div>
+              <div><b>{!needsMoreSpacing && evaluated.best?.rho ? `${evaluated.best.rho.toFixed(1)} Ω·m` : "–"}</b><small>ρa target</small></div>
+            </div>
             {sounding.length > 1 && <><h3>Kurva sounding</h3><SoundingPlot sounding={sounding} /></>}
             {evaluated.layers?.length ? <><h3>Lapisan indikatif</h3><LayerColumn layers={evaluated.layers} /></> : null}
             {evaluated.warnings?.length ? <div className="notice-stack"><b>Perhatian</b><ul>{evaluated.warnings.map((item, index) => <li key={index}>{item}</li>)}</ul></div> : null}

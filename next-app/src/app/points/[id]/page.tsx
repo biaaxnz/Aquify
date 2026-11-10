@@ -54,7 +54,7 @@ export default async function PointDetailPage({ params }: { params: Promise<{ id
         <form action={runRuleAnalysis}><input type="hidden" name="point_id" value={point.id} /><button className="btn sm" type="submit">Jalankan analisis aturan</button></form>
         {savedAnalysis ? <div className="statcards"><div><b>{savedAnalysis.verdict}</b><small>Kesimpulan indikatif</small></div><div><b>{savedAnalysis.score}/100</b><small>Skor indikatif</small></div><div><b>{savedAnalysis.best_depth ? `${savedAnalysis.best_depth} m` : "–"}</b><small>Kedalaman target</small></div></div> : <p className="hint">Jalankan analisis aturan untuk menyimpan hasil.</p>}
         {sounding.length > 1 && <><h3>Kurva sounding</h3><SoundingPlot sounding={sounding} /></>}
-        {sounding.length > 0 && <><h3>Penampang 2D</h3><Section2DPlot rows={rows} /></>}
+        <h3>Penampang 2D</h3><Section2DPlot rows={rows} />
         {savedAnalysis?.result && typeof savedAnalysis.result === "object" && !Array.isArray(savedAnalysis.result) && Array.isArray((savedAnalysis.result as { layers?: unknown }).layers)
           ? <LayerColumn layers={(savedAnalysis.result as { layers: Parameters<typeof LayerColumn>[0]["layers"] }).layers} />
           : null}
