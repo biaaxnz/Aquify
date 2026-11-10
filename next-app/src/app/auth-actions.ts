@@ -106,7 +106,7 @@ export async function requestPasswordReset(formData: FormData) {
   }
 
   if (failure) redirect(`/forgot-password?error=${encodeURIComponent(failure)}`);
-  redirect("/forgot-password?message=Jika%20email%20terdaftar%2C%20tautan%20pemulihan%20akan%20dikirim.%20Periksa%20kotak%20masuk%20atau%20folder%20spam.");
+  redirect("/forgot-password?message=Tautan%20pemulihan%20sudah%20dikirim%20ke%20email.%20Silakan%20periksa%20kotak%20masuk%20dan%20folder%20spam.");
 }
 
 export async function updatePassword(formData: FormData) {

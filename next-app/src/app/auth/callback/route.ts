@@ -31,8 +31,12 @@ export async function GET(request: NextRequest) {
     : await supabase.auth.verifyOtp({ token_hash: tokenHash!, type: "recovery" });
   if (error) {
     console.error("Aquify password recovery callback failed", error.message);
+    const normalizedError = error.message.toLowerCase();
+    const message = normalizedError.includes("verifier") || normalizedError.includes("pkce")
+      ? "Tautan dibuka di browser berbeda dari tempat permintaan dibuat. Minta tautan baru, lalu buka di browser yang sama dan gunakan satu kali."
+      : "Tautan pemulihan sudah kedaluwarsa atau sudah digunakan. Minta tautan baru dan buka sekali saja.";
     return NextResponse.redirect(new URL(
-      "/forgot-password?error=Tautan%20pemulihan%20sudah%20kedaluwarsa%20atau%20sudah%20digunakan.%20Minta%20tautan%20baru.",
+      `/forgot-password?error=${encodeURIComponent(message)}`,
       request.url,
     ));
   }
