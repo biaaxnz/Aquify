@@ -2,6 +2,7 @@
 
 export type AquifyNotification = {
   id: string;
+  dedupeKey?: string;
   title: string;
   message: string;
   href: string;
@@ -29,6 +30,22 @@ export function addNotification(notification: Omit<AquifyNotification, "id" | "c
   const notifications = getNotifications();
   notifications.unshift({
     ...notification,
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    readAt: null,
+  });
+  saveNotifications(notifications);
+}
+
+export function addNotificationOnce(
+  dedupeKey: string,
+  notification: Omit<AquifyNotification, "id" | "dedupeKey" | "createdAt" | "readAt">,
+) {
+  const notifications = getNotifications();
+  if (notifications.some((item) => item.dedupeKey === dedupeKey)) return;
+  notifications.unshift({
+    ...notification,
+    dedupeKey,
     id: crypto.randomUUID(),
     createdAt: new Date().toISOString(),
     readAt: null,

@@ -6,7 +6,7 @@ Versi baru ini berjalan sebagai aplikasi Next.js + TypeScript di Vercel dan mema
 
 Sudah tersedia: peta Leaflet dengan filter dan pemilih koordinat, kurva sounding, penampang 2D hasil interpolasi untuk pengukuran yang memiliki posisi lintasan, analisis aturan indikatif, integrasi Gemini opsional, sinkron Firebase Realtime Database opsional, dan API ingest ESP32 opsional. Fitur yang membutuhkan layanan eksternal baru aktif setelah konfigurasi server dan migrasi SQL dijalankan.
 
-Penampang 2D adalah pseudosection interpolasi data ukur, bukan inversi resistivitas 2D. Analisis aturan dan Gemini hanya menghasilkan interpretasi indikatif, bukan jaminan air atau rekomendasi pengeboran. Notifikasi push, serial USB/Web Serial, OTP khusus, dan migrasi data MySQL belum dipindahkan. Jangan hapus versi PHP/database lama sebelum migrasi dan pengujian operasional selesai.
+Penampang 2D adalah pseudosection interpolasi data ukur, bukan inversi resistivitas 2D. Analisis aturan dan Gemini hanya menghasilkan interpretasi indikatif, bukan jaminan air atau rekomendasi pengeboran. Skrining TDS/EC dapat membuat peringatan dalam aplikasi pada perangkat/browser yang sedang digunakan; ini bukan notifikasi push, bukan konfirmasi air payau, dan tidak mengukur penyusutan cadangan air tanah. Notifikasi push, serial USB/Web Serial, OTP khusus, dan migrasi data MySQL belum dipindahkan. Jangan hapus versi PHP/database lama sebelum migrasi dan pengujian operasional selesai.
 
 ## Prasyarat dan konfigurasi
 

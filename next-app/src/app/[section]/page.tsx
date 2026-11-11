@@ -7,6 +7,7 @@ import { Icon } from "@/components/icon";
 import { SurveyMap } from "@/components/survey-map";
 import { LayerColumn, Section2DPlot, SoundingPlot } from "@/components/resistivity-plots";
 import { NotificationCenter } from "@/components/notification-center";
+import { WaterQualityAlertMonitor } from "@/components/water-quality-alert-monitor";
 import { analyzeSounding, assessWater, buildSounding, type RuleAnalysis } from "@/lib/analysis";
 import { createClient } from "@/lib/supabase/server";
 
@@ -101,6 +102,18 @@ export default async function ModulePage({
       </>}
 
       {section === "water" && <>
+        <WaterQualityAlertMonitor samples={water.map((row) => {
+          const point = Array.isArray(row.points) ? row.points[0] : row.points;
+          return {
+            id: row.id,
+            point_id: row.point_id,
+            point_code: point?.code ?? "",
+            point_name: point?.name ?? "",
+            tds_ppm: row.tds_ppm,
+            ec_us: row.ec_us,
+            measured_at: row.measured_at,
+          };
+        })} />
         <section className="card">
           <h2>Catat sampel air</h2>
           {points.length ? <form className="form-grid" action={addWaterSample} style={{ marginTop: 16 }}>

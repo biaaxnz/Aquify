@@ -55,7 +55,7 @@ export function NotificationCenter() {
       </div>
       {error && <div className="alert bad" role="alert">{error}</div>}
       {notifications.length === 0 ? (
-        <div className="empty"><b>Belum ada notifikasi</b>Notifikasi unduhan PDF yang berhasil akan tersimpan di sini.</div>
+        <div className="empty"><b>Belum ada notifikasi</b>Peringatan skrining kualitas air dan pemberitahuan unduhan PDF akan muncul di sini pada perangkat ini.</div>
       ) : (
         <div className="notification-list">
           {notifications.map((notification) => (
